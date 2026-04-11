@@ -163,7 +163,7 @@ checkpoint on different hardware.
 **Recovery strategies.** Roll back to the last healthy checkpoint (typically 1,000
 steps before the spike). Some practitioners add "loss spike rollback" to their
 training loop: if $\mathcal{L}_{t} > \alpha \cdot \mathcal{L}_{t-1}$ (where
-$\alpha \approx 1.5$–$3$), automatically revert and skip the offending batch.
+$\alpha \approx 1.5\text{–}3$), automatically revert and skip the offending batch.
 
 ---
 
@@ -410,7 +410,7 @@ risk of instability. This is why simply "use the biggest batch that fits on GPUs
 is not always the right strategy — throughput and optimiser quality are in tension.
 
 **Typical values.** For large language models, $B_\text{crit}$ tends to be on the
-order of $10^5$–$10^6$ tokens. GPT-3 was trained with a batch size of $\sim 3.2M$
+order of $10^5\text{–}10^6$ tokens. GPT-3 was trained with a batch size of $\sim 3.2M$
 tokens, well above $B_\text{crit}$, prioritising throughput over per-step
 efficiency.
 

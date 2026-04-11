@@ -116,7 +116,7 @@ where $\text{lr}_{\text{min}}$ is a small final learning rate (often 10% of $\te
 **Typical hyperparameters:**
 - $\text{lr}_{\text{max}} \approx 3 \times 10^{-4}$ for medium-scale LLMs (adjusted with batch size)
 - $\text{lr}_{\text{min}} = 0.1 \times \text{lr}_{\text{max}}$ or $= 0$
-- $T_{\text{warm}} = 1\%$–$5\%$ of $T_{\text{total}}$
+- $T_{\text{warm}} = 1\%\text{–}5\%$ of $T_{\text{total}}$
 
 ---
 

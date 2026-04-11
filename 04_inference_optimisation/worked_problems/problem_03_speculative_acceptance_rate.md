@@ -356,8 +356,8 @@ $$
 \frac{dS}{d\gamma} = 0 \implies \gamma_\text{opt} \approx \frac{\log(1 - (1-\alpha)/\ln(1/\alpha))}{\log \alpha}
 $$
 
-In practice, $\gamma = 4$–$8$ is typical for a draft model that is $10\times$
-faster and achieves $\alpha \approx 0.7$–$0.9$.
+In practice, $\gamma = 4\text{–}8$ is typical for a draft model that is $10\times$
+faster and achieves $\alpha \approx 0.7\text{–}0.9$.
 
 ---
 
@@ -373,7 +373,7 @@ the same set of tokens.
 — it depends on the context. On factual prompts with peaked distributions
 (both $p$ and $q$ concentrate on a few tokens), $\alpha$ is high. On open-ended
 creative prompts with flat distributions, $\alpha$ is lower. Real systems report
-$\alpha \approx 0.6$–$0.9$ on typical benchmarks.
+$\alpha \approx 0.6\text{–}0.9$ on typical benchmarks.
 
 **Batch inference.** Speculative decoding is most beneficial for a single request
 (batch size 1). In large-batch serving, the target model is already compute-bound
@@ -385,7 +385,7 @@ decoding address orthogonal bottlenecks.
 **Self-speculative decoding (Medusa, EAGLE, Draft-and-Verify).** An alternative
 to a separate draft model is to add extra heads to the target model itself
 that predict tokens at future positions in parallel, eliminating the need for
-a separate smaller model. EAGLE-2 (Li et al., 2024) achieves $3$–$4\times$
+a separate smaller model. EAGLE-2 (Li et al., 2024) achieves $3\text{–}4\times$
 speedup this way on open-source models.
 
 ---

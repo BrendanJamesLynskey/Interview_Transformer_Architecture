@@ -180,9 +180,9 @@ The vocabulary size $V$ is a fundamental hyperparameter of the tokeniser.
 
 **Practical trade-off:**
 
-For English-centric models: $V = 32k$–$50k$ is usually sufficient.
-For multilingual models: $V = 100k$–$250k$ is needed to give each language adequate vocabulary coverage.
-For code-heavy models: Larger vocabulary or dedicated code tokens help; many code models use $V = 50k$–$100k$.
+For English-centric models: $V = 32k\text{–}50k$ is usually sufficient.
+For multilingual models: $V = 100k\text{–}250k$ is needed to give each language adequate vocabulary coverage.
+For code-heavy models: Larger vocabulary or dedicated code tokens help; many code models use $V = 50k\text{–}100k$.
 
 **Fertility:** The ratio of tokens to words for a given language. English has fertility ~1.0–1.3 with standard BPE. Languages with complex morphology (Turkish, Finnish) or different scripts (Thai, Arabic) have much higher fertility, making models trained on English vocabularies inefficient for these languages.
 

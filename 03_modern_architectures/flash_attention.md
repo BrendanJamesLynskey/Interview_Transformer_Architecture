@@ -45,7 +45,7 @@ Modern GPUs have a two-level memory hierarchy:
 | Memory | Size (A100) | Bandwidth | Latency |
 |---|---|---|---|
 | SRAM (on-chip, shared memory / registers) | $\sim 20$ MB per GPU | $\sim 19$ TB/s | $\sim 1$ cycle |
-| HBM (off-chip, "GPU memory") | $40$–$80$ GB | $\sim 2$ TB/s | $\sim 100$ cycles |
+| HBM (off-chip, "GPU memory") | $40\text{–}80$ GB | $\sim 2$ TB/s | $\sim 100$ cycles |
 
 **The bottleneck.** Most GPU kernels spend more time waiting for HBM reads/writes than doing arithmetic. The ratio of compute to memory bandwidth (arithmetic intensity) for standard attention is low: you do $O(N^2 d)$ FLOPs but transfer $O(N^2)$ bytes for the attention matrix — giving arithmetic intensity $\sim d$ FLOPs/byte, which is low for typical $d = 64\text{–}128$.
 
@@ -59,7 +59,7 @@ Modern GPUs have a two-level memory hierarchy:
 
 FlashAttention's strategy is **tiling with online softmax**:
 
-1. **Tile.** Divide $Q$, $K$, $V$ into blocks small enough to fit in SRAM (typically $B_r$ rows for $Q$ blocks and $B_c$ columns for $K$/$V$ blocks).
+1. **Tile.** Divide $Q$, $K$, $V$ into blocks small enough to fit in SRAM (typically $B_r$ rows for $Q$ blocks and $B_c$ columns for $K/V$ blocks).
 2. **Incremental softmax.** Process blocks sequentially. Maintain running statistics (running max and running sum) to compute the correct softmax without ever materialising the full $N \times N$ attention matrix.
 3. **Accumulate output.** Incrementally accumulate the output $O$ block-by-block, correcting for the running softmax statistics.
 
