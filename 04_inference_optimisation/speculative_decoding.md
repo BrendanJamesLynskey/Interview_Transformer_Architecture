@@ -171,9 +171,82 @@ Speculative decoding helps when:
 
 ---
 
+### Q7. What happens to the accept/reject procedure when the target is sampled at temperature 0 (greedy decoding)?
+
+**Answer.**
+
+Temperature $T$ scales the logits before softmax: $p_T(x) = \text{softmax}(\ell(x)/T)$. As $T \to 0$, the softmax collapses to an argmax — the distribution becomes a one-hot (degenerate) vector placing all mass on the highest-logit token. In practice, "temperature 0" is implemented directly as a greedy selection of $\arg\max_x \ell(x)$ without ever computing a full softmax.
+
+Running speculative decoding at $T=0$ applies greedy sampling to **both** models. Let:
+
+- $\hat{x}_T = \arg\max_x \ell_T(x \mid \text{context})$ — the target's greedy token
+- $\hat{x}_D = \arg\max_x \ell_D(x \mid \text{context})$ — the draft's greedy token
+
+At $T=0$ the target and draft distributions become:
+
+$$p(x) = \delta(x - \hat{x}_T), \quad q(x) = \delta(x - \hat{x}_D)$$
+
+where $\delta$ is a Kronecker delta (1 if the arguments match, 0 otherwise).
+
+**The acceptance rule at $T=0$:**
+
+The draft proposes its argmax token $\hat{x}_D$. The acceptance probability is:
+
+$$\min\!\left(1, \frac{p(\hat{x}_D)}{q(\hat{x}_D)}\right) = \min\!\left(1, \frac{\delta(\hat{x}_D - \hat{x}_T)}{1}\right) = \begin{cases} 1 & \text{if } \hat{x}_D = \hat{x}_T \\ 0 & \text{if } \hat{x}_D \neq \hat{x}_T \end{cases}$$
+
+The probabilistic rule collapses into a deterministic exact-match check:
+
+- **Draft's argmax matches the target's argmax** → accept with certainty.
+- **Draft's argmax differs from the target's argmax** → reject with certainty.
+
+**The rejection distribution at $T=0$:**
+
+On rejection the standard procedure resamples from the corrected distribution $p'(x) = \text{norm}(\max(0, p(x) - q(x)))$. At $T = 0$:
+
+$$\max(0, p(x) - q(x)) = \begin{cases} 1 & \text{if } x = \hat{x}_T \text{ and } \hat{x}_T \neq \hat{x}_D \\ 0 & \text{otherwise} \end{cases}$$
+
+After normalisation, $p'(x) = \delta(x - \hat{x}_T)$ — the corrected sample is deterministically the target's argmax. So on rejection, the algorithm emits $\hat{x}_T$, then stops the current round and restarts drafting from that position.
+
+**Putting it together — the $T=0$ algorithm reduces to:**
+
+```
+for i = 1..K:
+    if draft_token[i] == target_argmax[i]:
+        accept draft_token[i]
+    else:
+        emit target_argmax[i]  # the "rejection" output
+        break                   # stop this round
+# bonus token at end of round (only if all K accepted):
+emit target_argmax[K+1]
+```
+
+No probability arithmetic is needed anywhere. The implementation operates on **token IDs alone**. The target model's greedy decisions are already known because the single verification forward pass produces logits at every position, from which argmax is trivially computed.
+
+**The key invariant at $T=0$:**
+
+The output sequence is **bit-for-bit identical** to running the target model alone in greedy mode. This is the $T=0$ specialisation of the exact distributional equivalence proven in Q3: since the target distribution is a point mass at $\hat{x}_T$, speculative decoding must and does produce $\hat{x}_T$ at every position.
+
+**Why acceptance rates are highest at $T=0$:**
+
+At $T=0$, the acceptance rate is the probability that the draft's argmax matches the target's argmax across one-step lookaheads — purely a measure of how well the draft model mimics the target's *top-1 prediction*. For same-family draft/target pairs (e.g., LLaMA-3 8B as draft for LLaMA-3 70B), top-1 agreement is often $0.7\text{--}0.9$ on natural text, rising to $>0.95$ on constrained outputs like source code. In contrast, at $T > 0$ the draft must match not just the argmax but the full shape of the target's distribution in a probabilistic sense; with a diffuse target distribution, the draft is more likely to sample a low-probability token that the target would only pick rarely — lowering the acceptance rate.
+
+**Practical edge cases:**
+
+1. **Argmax ties.** If the target's logit distribution has two tokens with identical top logits, the argmax is ambiguous. Real implementations break ties by token ID (lowest wins) or by numerical ordering from the hardware FP8/FP16 reduction. The draft and target must use the same tie-breaking rule; otherwise, legitimate agreement gets misread as disagreement and speculative decoding silently degrades. In practice, exact ties in FP16 softmax outputs are vanishingly rare, but they do occur in quantised (INT4/INT8) inference where discretisation can cause true ties.
+
+2. **Numerical divergence between draft and target.** Even if the draft were a perfect copy of the target's early layers, FP16 vs BF16 or batched-vs-unbatched kernel differences can shift a logit by a fraction of an ULP, flipping the argmax near ties. This manifests as "acceptance rate depends on batch size" — a surprising observation in production deployments that is explained entirely by tie-sensitivity in the argmax.
+
+3. **Logit top-$k$/top-$p$ filters at $T=0$.** Some inference stacks apply nucleus/top-$k$ filtering *before* the temperature scaling. At $T=0$, these filters have no effect on the final token (the argmax is unchanged by removing non-argmax tokens), but they can affect logging, repetition penalties, and logit biases applied later in the pipeline. When comparing draft and target, ensure both apply the same pre-argmax filter or neither does.
+
+**Why this regime matters in practice:**
+
+A large fraction of production LLM traffic runs at or near $T=0$: code generation, structured-output tasks (JSON/SQL), retrieval-augmented factual responses, and classification. For these workloads, the $T=0$ formulation of speculative decoding is the relevant one — and it is both the easiest to implement and the one where speculative decoding provides the largest speedups (typically $2.5\text{--}3.5\times$ on A100/H100-class hardware).
+
+---
+
 ## Advanced
 
-### Q7. Derive the optimal lookahead length $K$ that maximises expected throughput.
+### Q8. Derive the optimal lookahead length $K$ that maximises expected throughput.
 
 **Answer.**
 
@@ -214,7 +287,7 @@ Optimal $K \approx 6$. Beyond $K = 6$, the decreasing marginal acceptance rate m
 
 ---
 
-### Q8. What is SpecTr and how does tree-based speculative decoding improve on vanilla speculative decoding?
+### Q9. What is SpecTr and how does tree-based speculative decoding improve on vanilla speculative decoding?
 
 **Answer.**
 
