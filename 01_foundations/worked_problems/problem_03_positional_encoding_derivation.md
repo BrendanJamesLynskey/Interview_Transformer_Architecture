@@ -20,7 +20,7 @@ where $\text{pos} \in \{0, 1, \ldots, n-1\}$ is the token position, $i \in \{0, 
 
 **(c)** Show that the full multi-dimensional transition $PE_{\text{pos}} \to PE_{\text{pos}+k}$ is a block-diagonal rotation matrix. Write out the full $4 \times 4$ rotation matrix for $d = 4$ and offset $k = 1$.
 
-**(d)** Compute the inner product $PE_\text{pos} \cdot PE_{\text{pos}+k}$ and show it depends only on $k$. Use this to show that the encodings form an approximately orthogonal basis for large $k$.
+**(d)** Compute the inner product $PE_\text{pos} \cdot PE_{\text{pos}+k}$ and show it depends only on $k$. Use this to examine whether the encodings become approximately orthogonal for large $k$.
 
 **(e)** Discuss how the multi-scale frequency structure of sinusoidal PE is analogous to a binary number system.
 
@@ -153,11 +153,9 @@ $$PE_\text{pos} \cdot PE_{\text{pos}+k} = PE_\text{pos}^T M_k PE_\text{pos} = PE
 
 Since $M_k$ is orthogonal, $|PE_{\text{pos}+k}|^2 = |PE_\text{pos}|^2$ (norms are preserved).
 
-**Near-orthogonality for large $k$:**
+**Does it approach orthogonality for large $k$?**
 
-For large $k$, the frequencies $\omega_i$ span many orders of magnitude (from $\omega_0 = 1$ to $\omega_{d/2-1} \approx 10^{-4}$). The $\cos(k\omega_i)$ terms oscillate at different rates. For typical values of $k$ (not a multiple of $2\pi / \omega_i$ for any $i$), the terms sum approximately to zero:
-
-$$PE_\text{pos} \cdot PE_{\text{pos}+k} \approx 0 \quad \text{for large } k \text{ (on average)}$$
+Only slowly. The frequencies span many orders of magnitude (from $\omega_0 = 1$ to $\omega_{d/2-1} \approx 10^{-4}$). The high-frequency terms oscillate and roughly cancel, but every pair with $k\omega_i \ll 1$ contributes $\cos(k\omega_i) \approx 1$. Until $k$ approaches the longest wavelengths (of order the base, 10,000), a large share of the pairs is in that regime, so the inner product stays well above zero.
 
 **Compute for $d = 4$, specific values:**
 
@@ -170,12 +168,12 @@ $$PE_\text{pos} \cdot PE_{\text{pos}+k} = \cos(k \cdot 1) + \cos(k \cdot 0.01)$$
 | 5 | 0.2837 | 0.9988 | **1.2825** |
 | 10 | -0.8391 | 0.9950 | **0.1559** |
 | 20 | 0.4081 | 0.9800 | **1.3881** |
-| 100 | 0.8623 | 0.9950 | **1.8573** |
-| 314 | -0.9999 | 0.9511 | **-0.0488** ≈ 0 |
+| 100 | 0.8623 | 0.5403 | **1.4026** |
+| 314 | 0.9873 | -1.0000 | **-0.0127** ≈ 0 |
 
-The inner product is not monotonically decreasing due to the cosine oscillations. However, for random position pairs with large $d$, the central-limit-theorem effect makes the inner product concentrate near zero.
+The inner product is not monotonically decreasing due to the cosine oscillations.
 
-**For large $d$:** With $d/2$ i.i.d.-ish cosine terms, by the CLT the sum concentrates around its mean (which is 0 for "random" $k$) with standard deviation $\sim \sqrt{d/2}$. The relative magnitude $|PE_\text{pos} \cdot PE_{\text{pos}+k}| / \|PE\|^2 \sim 1/\sqrt{d}$, approaching orthogonality for large $d$.
+**For large $d$:** the terms are not independent, so there is no central-limit cancellation. For $d = 128$ (norm$^2$ = 64), the inner product averaged over $1 \le k < 100$ is still about 54% of the norm$^2$ (minimum about 37%); averaged over $k < 1{,}000$ it is about 29%; only for $k$ of order 10,000 does it average near zero. Sinusoidal encodings of nearby positions are therefore strongly similar, and similarity decays gradually with distance — they are not an approximately orthogonal basis at typical sequence lengths.
 
 ---
 
@@ -199,9 +197,9 @@ Each bit toggles with a frequency that decreases by a factor of 2. Together they
 | Dim pair | Frequency $\omega_i$ | Period $2\pi / \omega_i$ |
 |---|---|---|
 | $i = 0$ | $1$ | $2\pi \approx 6.3$ |
-| $i = 1$ | $10^{-2/d}$ | $\sim 10^{2/d} \times 2\pi$ |
-| $i = d/4$ | $10^{-1/2} \approx 0.032$ | $\sim 200$ |
-| $i = d/2 - 1$ | $10^{-1} = 0.0001$ | $\sim 62{,}832$ |
+| $i = 1$ | $10000^{-2/d} = 10^{-8/d}$ | $2\pi \times 10^{8/d}$ |
+| $i = d/4$ | $10000^{-1/2} = 0.01$ | $\sim 628$ |
+| $i = d/2 - 1$ | $\approx 10^{-4} = 0.0001$ | $\sim 62{,}832$ |
 
 Frequencies decrease geometrically (by factor $10000^{2/d}$ per step), analogous to binary where periods double.
 
@@ -292,27 +290,27 @@ print(f"  Norm^2 = d/2 = {128//2}; relative magnitude: {np.abs(inner_products[1:
 **Expected output:**
 ```
 PE for d=4, positions 0, 1, 2:
-  PE_0 = [0.     1.     0.     1.    ]
-  PE_1 = [0.8415 0.5403 0.01   0.9999]
-  PE_2 = [0.9093 -0.4161  0.02   0.9998]
+  PE_0 = [0. 1. 0. 1.]
+  PE_1 = [0.8415 0.5403 0.01   1.    ]
+  PE_2 = [ 0.9093 -0.4161  0.02    0.9998]
 
 Part (b): Rotation matrix prediction vs actual (pos=7, k=3):
-  Predicted: [0.656987  0.754027  0.029988  0.999550]
-  Actual:    [0.656987  0.754027  0.029988  0.999550]
-  Max error: 2.22e-16
+  Predicted: [-0.544021 -0.839072  0.099833  0.995004]
+  Actual:    [-0.544021 -0.839072  0.099833  0.995004]
+  Max error: 1.11e-16
 
 Part (c): M_1 for d=4:
-[[ 0.5403  0.8415  0.      0.    ]
- [-0.8415  0.5403  0.      0.    ]
- [ 0.      0.      1.      0.01  ]
- [ 0.      0.     -0.01    1.    ]]
-  M_1 @ PE_0 = [0.8415 0.5403 0.01   0.9999] (should equal PE_1 = [0.8415 0.5403 0.01   0.9999])
+[[ 0.5403   0.84147  0.       0.     ]
+ [-0.84147  0.5403   0.       0.     ]
+ [ 0.       0.       0.99995  0.01   ]
+ [ 0.       0.      -0.01     0.99995]]
+  M_1 @ PE_0 = [0.8415 0.5403 0.01   1.    ] (should equal PE_1 = [0.8415 0.5403 0.01   1.    ])
 
 Part (d): Inner product PE_50 . PE_(50+k) for d=128:
   k=0: 64.0000 (norm^2 = 64.0000)
-  k=1: 63.3642
-  k=10: 41.2189
-  k=50: -6.3281
-  Mean |inner product| for k>0: 14.2537
-  Norm^2 = d/2 = 64; relative magnitude: 0.2227
+  k=1: 62.0937
+  k=10: 42.8200
+  k=50: 34.9550
+  Mean |inner product| for k>0: 34.2423
+  Norm^2 = d/2 = 64; relative magnitude: 0.5350
 ```

@@ -154,15 +154,15 @@ Mathematically, if we model the reward model's error as $\epsilon(y) = r_\text{t
 
 **Step 1: Estimate reward model quality.**
 
-A reward model trained on 50,000 pairwise comparisons with typical annotator agreement rates (~70%) has an effective clean-data size of roughly 35,000 pairs. For a summarisation task with moderate diversity, this is a moderate-quality reward model. From Gao et al.'s scaling curves, reward models trained on 10K–50K comparisons have an over-optimisation onset at approximately KL = 1.0–3.0 nats (measured as sequence-level KL divergence).
+A reward model trained on 50,000 pairwise comparisons with typical annotator agreement rates (~70%) has an effective clean-data size of roughly 35,000 pairs. For a summarisation task with moderate diversity, this is a moderate-quality reward model. As a working assumption for this exercise (not a figure reported by Gao et al., whose set-up used synthetic gold-model labels), take the over-optimisation onset to be around KL = 1.0–3.0 nats (sequence-level KL divergence).
 
 **Step 2: Estimate the optimal policy's KL from the reference.**
 
-The optimal KL before peak gold reward (from Gao et al.'s empirical curves) approximately follows:
+Assume, for illustration, that the optimal KL before peak gold reward grows with the square root of the preference data (this scaling rule is an assumption of this exercise, not a fit from Gao et al.):
 
 $$D_\text{KL}^* \approx \alpha \cdot \sqrt{N_\text{pref}}$$
 
-where $N_\text{pref}$ is the number of preference pairs and $\alpha \approx 0.005$ nats per $\sqrt{\text{comparison}}$ (estimated from their figures). For $N = 50{,}000$:
+where $N_\text{pref}$ is the number of preference pairs and $\alpha \approx 0.005$ nats per $\sqrt{\text{comparison}}$ (an assumed value). For $N = 50{,}000$:
 
 $$D_\text{KL}^* \approx 0.005 \times \sqrt{50{,}000} \approx 0.005 \times 223 \approx 1.1 \text{ nats}$$
 
@@ -192,7 +192,7 @@ This corresponds to an average per-token KL of $1.1 / 200 \approx 0.005$ nats pe
 | Concept | Key Formula / Insight |
 |---|---|
 | Reward hacking | $\mathbb{E}[r_\phi] \uparrow$ while $\mathbb{E}[r_\text{true}] \downarrow$ |
-| Over-optimisation curve | Gold reward peaks at $D_\text{KL}^* \approx \alpha\sqrt{N_\text{pref}}$, then declines |
+| Over-optimisation curve | Gold reward peaks, then declines, as KL grows (Part 5 assumes $D_\text{KL}^* \approx \alpha\sqrt{N_\text{pref}}$ for illustration) |
 | KL budget (50K pairs) | ~1.1 nats sequence-level KL |
 | Best mitigation (theory) | Ensemble reward + iterative retraining |
 | Best mitigation (practice) | Adaptive KL penalty + Best-of-N at inference |

@@ -321,7 +321,7 @@ resume training from the checkpoint.
 | 3  | B      |
 | 4  | A      |
 | 5  | B      |
-| 6  | C      |
+| 6  | B      |
 | 7  | C      |
 | 8  | B      |
 | 9  | B      |
@@ -419,8 +419,8 @@ and the parameter count.
 - **A is wrong.** It has the direction backwards: SMALLER vocabulary -> MORE tokens per sequence
   (longer sequences), not fewer.
 - **C is wrong.** Vocabulary size directly affects the embedding table and LM head size; for a
-  model like GPT-2 with $V = 50{,}257$ and $d = 1024$, the embedding table alone is ~200M
-  parameters.
+  model like GPT-2 Medium with $V = 50{,}257$ and $d = 1024$, the embedding table alone is
+  $50{,}257 \times 1{,}024 \approx 51$M parameters.
 - **D is wrong.** Smaller vocabulary means shorter average token length and MORE tokens per
   sentence, not a larger table.
 
@@ -428,19 +428,19 @@ and the parameter count.
 
 ### Q6 — Learning rate warm-up
 
-**Correct: C.**
+**Correct: B.**
 
-At the start of training, Adam's moment estimates ($m_t$ and $v_t$) are initialised to zero.
-For the first few steps these estimates are biased toward zero, causing Adam to take
-inappropriately scaled steps.  Warm-up allows the estimates to stabilise before large gradient
-steps are taken.  Additionally, gradients are noisiest early in training, so small initial
-updates reduce the chance of catastrophic early loss increases.
+At initialisation, gradients are noisy and poorly scaled, and large early updates can push the
+parameters into poor regions or cause loss spikes; a small, ramping learning rate avoids this.
+For Adam specifically, the adaptive step size (the $\sqrt{\hat{v}_t}$ denominator) is estimated
+from very few samples early on and has high variance (Liu et al., 2020, "On the Variance of the
+Adaptive Learning Rate and Beyond"), which warm-up also tempers.
 
 - **A is wrong.** Deliberate early overfitting is not a sound training strategy; warm-up is
   not intended to encourage overfitting.
-- **B is wrong.** While Adam bias correction is a related concern, the primary motivation given
-  in the original Transformer paper and subsequent LLM training guides is gradient noise at
-  initialisation.
+- **C is wrong.** Adam does not need warm-up to initialise its moment estimates: its bias
+  correction already compensates for the zero initialisation of $m_t$ and $v_t$. Warm-up helps
+  with the high variance of the early estimates, not with initialising them.
 - **D is wrong.** Warm-up does not reduce the total number of gradient steps; it only shapes
   the learning rate schedule.
 
@@ -484,9 +484,9 @@ finding that suggested scaling model size more aggressively was more important t
 
 With $N = 175 \times 10^9$, Chinchilla-optimal training would use approximately $20 \times 175
 \times 10^9 = 3.5 \times 10^{12}$ tokens.  GPT-3 used only $3 \times 10^{11}$ tokens -- roughly
-10x less than the Chinchilla optimum.  Given the same compute, a model of roughly $\sim$70B
-parameters trained on $\sim$1.4T tokens would have outperformed GPT-3 (this is essentially the
-Chinchilla model itself).
+10x less than the Chinchilla optimum.  Given the same compute ($\approx 3.1 \times 10^{23}$ FLOPs), a Chinchilla-optimal model would have
+roughly 50B parameters trained on $\sim$1T tokens. (Chinchilla itself, 70B parameters on 1.4T
+tokens, used Gopher's larger budget of $\approx 5.8 \times 10^{23}$ FLOPs.)
 
 - **A is wrong.** "Overtrained" would mean too many tokens, which is the opposite of GPT-3's
   situation.
@@ -609,7 +609,7 @@ AdamW applies the weight decay update multiplicatively and separately: $w \lefta
 
 Perplexity is the exponentiated cross-entropy: $\text{PPL} = e^{\mathcal{L}}$.  A model with
 PPL = 10 is as uncertain as a uniform distribution over 10 options at each step.  For reference,
-a character-level model on English text might achieve PPL ~2--4 bits/char; GPT-3 on Penn
+a character-level model on English text might achieve a per-character PPL of ~2--4; GPT-3 on Penn
 Treebank achieves PPL ~20.
 
 - **A is wrong.** Token accuracy tracks exact top-1 predictions; perplexity accounts for

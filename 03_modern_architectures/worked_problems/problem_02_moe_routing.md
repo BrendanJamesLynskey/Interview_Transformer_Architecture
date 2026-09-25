@@ -79,14 +79,14 @@ Max $= 3.2$. Shifted: $[-3.6, 0.0, -2.1, -3.0, -2.4, -0.3]$
 
 | Expert | $e^{z-\max}$ | Softmax |
 |---|---|---|
-| 1 | 0.0273 | 0.021 |
-| 2 | 1.0000 | 0.762 |
-| 3 | 0.1225 | 0.093 |
-| 4 | 0.0498 | 0.038 |
-| 5 | 0.0907 | 0.069 |
-| 6 | 0.7408 | 0.565 |
+| 1 | 0.0273 | 0.013 |
+| 2 | 1.0000 | 0.492 |
+| 3 | 0.1225 | 0.060 |
+| 4 | 0.0498 | 0.025 |
+| 5 | 0.0907 | 0.045 |
+| 6 | 0.7408 | 0.365 |
 
-Wait — these exceed 1. Recompute sum: $0.0273 + 1.0000 + 0.1225 + 0.0498 + 0.0907 + 0.7408 = 2.0311$
+Sum: $0.0273 + 1.0000 + 0.1225 + 0.0498 + 0.0907 + 0.7408 = 2.0311$
 
 Softmax: $[0.013, 0.492, 0.060, 0.025, 0.045, 0.365]$
 
@@ -170,7 +170,7 @@ $f_e = (\text{assignments to expert }e) / (T \times k)$
 
 Check $\sum f_e = 18/24$. But wait, $4+3+1+2+5+3 = 18$, while we expect $T \times k = 24$ total assignments. This is consistent — 18 unique assignments if some tokens share experts? No — with 12 tokens, each sending to 2 experts, we have 24 assignments. Let me re-read: "Expert 1: receives 4 tokens". With top-2, all 12 tokens send to exactly 2 experts: total = 24 expert slots. Let the counts be "4, 3, 1, 2, 5, 3" — these sum to 18, not 24.
 
-This reflects a possible inconsistency in the problem data, which is an intentional teaching point: in real MoE implementations, the counts should sum to $T \times k$. Let's accept the data as given and note that some experts may receive multiple assignments from the same token (unusual but possible) or the data was specified as "number of distinct tokens" vs "total slot count." For the purpose of this exercise, use the given values and note the discrepancy.
+This reflects an inconsistency in the problem data (the given $\bar{p}_e$ values also sum to 1.08 rather than 1), which is a useful teaching point: in real MoE implementations, the counts should sum to $T \times k$. Let's accept the data as given and note that some experts may receive multiple assignments from the same token (unusual but possible) or the data was specified as "number of distinct tokens" vs "total slot count." For the purpose of this exercise, use the given values and note the discrepancy.
 
 **Using the given values directly:**
 
@@ -238,15 +238,11 @@ $$\mathcal{L}_{\text{aux}} = \alpha \cdot E \sum_{e=1}^E f_e \cdot p_e = \alpha 
 
 So at perfect balance, $\mathcal{L}_{\text{aux}} = \alpha$.
 
-**Why this is the global minimum.** We want to minimise $\sum_e f_e p_e$ subject to $\sum_e f_e = 1$ and $\sum_e p_e = 1$ (both are probability distributions). By the Cauchy-Schwarz inequality:
+**Why this is the global minimum.** For arbitrary distributions $f$ and $p$, $\sum_e f_e p_e$ could be made smaller by anti-aligning them (large $f_e$ paired with small $p_e$). But the router cannot do that: $f$ is the hard (top-$k$) version of $p$, so experts with high soft probability are the ones that receive tokens, and the two are aligned. In the idealised case $f = p$:
 
-$$\sum_e f_e p_e \geq \frac{1}{E} \left(\sum_e \sqrt{f_e p_e}\right)^2$$
+$$E \sum_e p_e^2 \geq E \cdot \frac{\left(\sum_e p_e\right)^2}{E} = 1$$
 
-Wait — actually the minimum of $\sum_e f_e p_e$ subject to $\sum f_e = \sum p_e = 1$, $f_e, p_e \geq 0$ is achieved when $f$ and $p$ are "opposite" distributions. But in our case, $f$ depends on $p$ (the router determines both, via the hard top-k and soft probabilities). The constraint is that the same parameters determine both $f$ (hard routing) and $p$ (soft probabilities).
-
-A cleaner argument: $\sum_e f_e p_e$ is minimised when all $f_e$ and $p_e$ are equal. This follows from the rearrangement inequality: $\sum_e f_e p_e$ is minimised when $f$ and $p$ are "opposed" (largest $f_e$ paired with smallest $p_e$), but since both come from the same softmax (high $p_e$ tends to cause high $f_e$ via top-k), the only configuration where the two quantities can't be opposed is uniform. When uniform, $\sum_e f_e p_e = \sum_e (1/E)(1/E) = 1/E$.
-
-The loss value at uniform routing is $\alpha \cdot E \cdot 1/E = \alpha$, confirming the minimum.
+by the Cauchy–Schwarz inequality, with equality if and only if $p_e = 1/E$ for all $e$. So the loss is minimised, at $\alpha \cdot E \cdot 1/E = \alpha$, by uniform routing — the Switch Transformer paper's rationale for this loss.
 
 ---
 
@@ -362,10 +358,10 @@ print(f"\nAuxiliary loss (alpha=0.01): {loss.item():.6f}")
 **Expected output:**
 ```
 Routing weights (top-2):
-  Token 1: Expert 1 (0.575), Expert 4 (0.425)
+  Token 1: Expert 1 (0.574), Expert 4 (0.426)
   Token 2: Expert 2 (0.574), Expert 6 (0.426)
   Token 3: Expert 2 (0.525), Expert 1 (0.475)
   Token 4: Expert 5 (0.525), Expert 4 (0.475)
 
-Auxiliary loss (alpha=0.01): 0.021667
+Auxiliary loss (alpha=0.01): 0.011304
 ```

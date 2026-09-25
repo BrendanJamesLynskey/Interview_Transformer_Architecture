@@ -117,7 +117,7 @@ The clipped surrogate loss (maximised over $\theta$) is:
 
 $$\mathcal{L}_\text{CLIP}(\theta) = \mathbb{E}_t \left[ \min\!\left( \rho_t(\theta) \hat{A}_t,\; \text{clip}(\rho_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t \right) \right]$$
 
-The clip prevents the ratio from moving too far from 1 in either direction. With $\epsilon = 0.2$ (typical), ratio values outside $[0.8, 1.2]$ have their gradient zeroed.
+The clip prevents the ratio from moving too far from 1 in either direction. With $\epsilon = 0.2$ (typical), once the ratio moves outside $[0.8, 1.2]$ in the direction the advantage favours (above 1.2 for $\hat{A}_t > 0$, below 0.8 for $\hat{A}_t < 0$), the clipped term is selected and its gradient is zero.
 
 **Full PPO loss.** The complete training loss combines three terms:
 
@@ -176,7 +176,7 @@ Per-token reward: sparse terminal reward + dense per-token KL penalty
 
 1. **Forgetting the partition function.** The optimal policy $\pi^*(y|x) \propto \pi_\text{ref}(y|x) \exp(r/\beta)$ is not normalised by the naive exponential alone. $Z(x)$ is necessary and non-trivial.
 
-2. **Confusing KL direction.** The RLHF objective uses $\text{KL}[\pi_\theta \| \pi_\text{ref}]$ (forward KL), not $\text{KL}[\pi_\text{ref} \| \pi_\theta]$ (reverse KL). Forward KL penalises the policy for assigning probability to regions where the reference assigns zero probability. Reverse KL would have very different behaviour (mode-seeking vs mean-seeking).
+2. **Confusing KL direction.** The RLHF objective uses $\text{KL}[\pi_\theta \| \pi_\text{ref}]$ — the "reverse" KL in the usual convention where the first argument is the distribution being fitted — not $\text{KL}[\pi_\text{ref} \| \pi_\theta]$ (the forward KL). This direction penalises the policy for assigning probability to regions where the reference assigns little or none, and is mode-seeking; the forward KL would instead penalise the policy for missing any region the reference covers (mass-covering), which behaves very differently.
 
 3. **Treating the KL as a post-hoc add-on.** The KL penalty is not an afterthought — it is integral to the problem formulation and arises from the Lagrangian of the constrained optimisation. Without it, the optimal policy is a degenerate delta function on the highest-reward response.
 

@@ -78,13 +78,13 @@ $$[e^{-0.5},\ e^{-0.5},\ e^{0}] = [0.6065,\ 0.6065,\ 1.0000]$$
 **Step 3: Normalise**
 $$\text{sum} = 0.6065 + 0.6065 + 1.0000 = 2.2130$$
 
-$$\alpha_1 = \alpha_2 = \frac{0.6065}{2.2130} \approx 0.2742, \quad \alpha_3 = \frac{1.0000}{2.2130} \approx 0.4517$$
+$$\alpha_1 = \alpha_2 = \frac{0.6065}{2.2130} \approx 0.2741, \quad \alpha_3 = \frac{1.0000}{2.2130} \approx 0.4519$$
 
-**Verification:** $0.2742 + 0.2742 + 0.4517 = 1.0001 \approx 1.0$ ✓
+**Verification:** $0.2741 + 0.2741 + 0.4519 = 1.0001 \approx 1.0$ ✓ (rounding)
 
 Since all rows are identical, the attention weight matrix is:
 
-$$A = \begin{pmatrix} 0.2742 & 0.2742 & 0.4517 \\ 0.2742 & 0.2742 & 0.4517 \\ 0.2742 & 0.2742 & 0.4517 \end{pmatrix}$$
+$$A = \begin{pmatrix} 0.2741 & 0.2741 & 0.4519 \\ 0.2741 & 0.2741 & 0.4519 \\ 0.2741 & 0.2741 & 0.4519 \end{pmatrix}$$
 
 **Interpretation:** Every token query assigns approximately 27% of its attention to tokens 1 and 2, and 45% to token 3. Token 3 (whose key vector $[1,1,1,1]$ has larger dot products with all queries) is the most attended-to.
 
@@ -98,11 +98,11 @@ For any row $i$ of $A$ (they are all identical), the output row is:
 
 $$o_i = \alpha_1 v_1 + \alpha_2 v_2 + \alpha_3 v_3$$
 
-$$o_i = 0.2742 \begin{pmatrix}2\\0\end{pmatrix} + 0.2742 \begin{pmatrix}0\\2\end{pmatrix} + 0.4517 \begin{pmatrix}1\\1\end{pmatrix}$$
+$$o_i = 0.2741 \begin{pmatrix}2\\0\end{pmatrix} + 0.2741 \begin{pmatrix}0\\2\end{pmatrix} + 0.4519 \begin{pmatrix}1\\1\end{pmatrix}$$
 
-**Dimension 1:** $0.2742 \times 2 + 0.2742 \times 0 + 0.4517 \times 1 = 0.5484 + 0 + 0.4517 = 1.0001 \approx 1.0$
+**Dimension 1:** $0.2741 \times 2 + 0.2741 \times 0 + 0.4519 \times 1 = 0.5482 + 0 + 0.4519 = 1.0001 \approx 1.0$ (exactly 1, since $2\alpha_1 + \alpha_3 = 1$)
 
-**Dimension 2:** $0.2742 \times 0 + 0.2742 \times 2 + 0.4517 \times 1 = 0 + 0.5484 + 0.4517 = 1.0001 \approx 1.0$
+**Dimension 2:** $0.2741 \times 0 + 0.2741 \times 2 + 0.4519 \times 1 = 0 + 0.5482 + 0.4519 = 1.0001 \approx 1.0$
 
 $$O = \begin{pmatrix} 1.0 & 1.0 \\ 1.0 & 1.0 \\ 1.0 & 1.0 \end{pmatrix}$$
 
@@ -134,11 +134,11 @@ $$A_2 = [0.5,\ 0.5,\ 0.0]$$
 
 **Row 3** $[0.5, 0.5, 1.0]$: Same as before (all three valid).
 
-$$A_3 = [0.2742,\ 0.2742,\ 0.4517]$$
+$$A_3 = [0.2741,\ 0.2741,\ 0.4519]$$
 
 **Masked attention matrix:**
 
-$$A^{\text{causal}} = \begin{pmatrix} 1.0 & 0.0 & 0.0 \\ 0.5 & 0.5 & 0.0 \\ 0.2742 & 0.2742 & 0.4517 \end{pmatrix}$$
+$$A^{\text{causal}} = \begin{pmatrix} 1.0 & 0.0 & 0.0 \\ 0.5 & 0.5 & 0.0 \\ 0.2741 & 0.2741 & 0.4519 \end{pmatrix}$$
 
 **Compute masked output $O^{\text{causal}} = A^{\text{causal}} V$:**
 
@@ -153,7 +153,7 @@ $$O^{\text{causal}} = \begin{pmatrix} 2.0 & 0.0 \\ 1.0 & 1.0 \\ 1.0 & 1.0 \end{p
 **Which tokens' outputs changed?**
 
 - **Token 1:** Changed from $[1.0, 1.0]$ to $[2.0, 0.0]$. Now attends only to itself (value $v_1 = [2, 0]$).
-- **Token 2:** Changed from $[1.0, 1.0]$ to $[1.0, 1.0]$. By coincidence, the average of $v_1$ and $v_2$ equals the causal average.
+- **Token 2:** Unchanged at $[1.0, 1.0]$ — by coincidence, the equal-weight average of $v_1$ and $v_2$ equals the unmasked output, even though its attention weights did change.
 - **Token 3:** Unchanged — all three positions were available to it anyway.
 
 **Key takeaway:** The causal mask has the greatest impact on early tokens in the sequence. The first token is most severely constrained (can only attend to itself). Later tokens progressively have more context available, until the last token in training has access to the full sequence. At test time during generation, token $t$ always has exactly $t$ tokens of context.
@@ -228,9 +228,9 @@ Scaled scores:
   [0.5 0.5 1. ]]
 
 Attention weights A:
- [[0.2742 0.2742 0.4517]
-  [0.2742 0.2742 0.4517]
-  [0.2742 0.2742 0.4517]]
+ [[0.2741 0.2741 0.4519]
+  [0.2741 0.2741 0.4519]
+  [0.2741 0.2741 0.4519]]
 Row sums: [1. 1. 1.]
 
 Output O:
@@ -241,7 +241,7 @@ Output O:
 Causal attention weights:
  [[1.     0.     0.    ]
   [0.5    0.5    0.    ]
-  [0.2742 0.2742 0.4517]]
+  [0.2741 0.2741 0.4519]]
 
 Causal output:
  [[2. 0.]

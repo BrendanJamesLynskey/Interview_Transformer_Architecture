@@ -78,7 +78,7 @@ Sum $= 1.0000 + 0.1653 + 0.0369 + 0.2725 + 0.5488 + 0.0821 = 2.1056$
 Softmax probabilities:
 
 $$
-p^{(1)} = [0.4749,\ 0.0785,\ 0.0175,\ 0.1294,\ 0.2607,\ 0.0390]
+p^{(1)} = [0.4749,\ 0.0785,\ 0.0175,\ 0.1294,\ 0.2606,\ 0.0390]
 $$
 
 **Position 2** — logits: $[-0.5,\ 3.2,\ 0.1,\ -1.0,\ 0.2,\ 1.1]$, max $= 3.2$
@@ -99,7 +99,7 @@ Sum $= 0.0247 + 1.0000 + 0.0450 + 0.0150 + 0.0498 + 0.1225 = 1.2570$
 Softmax probabilities:
 
 $$
-p^{(2)} = [0.0196,\ 0.7955,\ 0.0358,\ 0.0119,\ 0.0396,\ 0.0975]
+p^{(2)} = [0.0197,\ 0.7955,\ 0.0358,\ 0.0119,\ 0.0396,\ 0.0974]
 $$
 
 **Position 3** — logits: $[1.0,\ 0.5,\ 2.8,\ 0.3,\ -0.7,\ 1.4]$, max $= 2.8$
@@ -115,7 +115,7 @@ $$
 e^{-2.5} = 0.0821,\quad e^{-3.5} = 0.0302,\quad e^{-1.4} = 0.2466
 $$
 
-Sum $= 0.1653 + 0.1003 + 1.0000 + 0.0821 + 0.0302 + 0.2466 = 1.6245$
+Sum $= 0.1653 + 0.1003 + 1.0000 + 0.0821 + 0.0302 + 0.2466 = 1.6244$ (rounded terms sum to 1.6245)
 
 Softmax probabilities:
 
@@ -134,9 +134,9 @@ Taking natural log:
 
 | Position | Target index $y_t$ | $p_{y_t}^{(t)}$ | $\log p_{y_t}^{(t)}$ |
 |----------|--------------------|------------------|----------------------|
-| 1        | 0                  | 0.4749           | $-0.7444$            |
-| 2        | 1                  | 0.7955           | $-0.2291$            |
-| 3        | 2                  | 0.6156           | $-0.4853$            |
+| 1        | 0                  | 0.4749           | $-0.7446$            |
+| 2        | 1                  | 0.7955           | $-0.2287$            |
+| 3        | 2                  | 0.6156           | $-0.4852$            |
 
 **Efficient computation note.** In practice, we do not compute the softmax
 explicitly and then take the log. Instead, we use the **log-sum-exp** identity:
@@ -161,7 +161,7 @@ $$
 = 2.1 - 2.8446 = -0.7446
 $$
 
-(Small rounding difference from the two-stage approach above; both are correct.)
+(This matches the two-stage approach above.)
 
 ---
 
@@ -175,9 +175,9 @@ $$
 
 | Position | $-\log p_{y_t}^{(t)}$ | Interpretation |
 |----------|-----------------------|----------------|
-| 1        | 0.7444                | Model assigned 47.5% to correct token — moderate |
-| 2        | 0.2291                | Model assigned 79.6% to correct token — confident and correct |
-| 3        | 0.4853                | Model assigned 61.6% to correct token — fairly confident |
+| 1        | 0.7446                | Model assigned 47.5% to correct token — moderate |
+| 2        | 0.2287                | Model assigned 79.6% to correct token — confident and correct |
+| 3        | 0.4852                | Model assigned 61.6% to correct token — fairly confident |
 
 ---
 
@@ -188,9 +188,9 @@ positions:
 
 $$
 \mathcal{L} = \frac{1}{T} \sum_{t=1}^{T} \ell_t
-= \frac{1}{3}(0.7444 + 0.2291 + 0.4853)
-= \frac{1.4588}{3}
-= \boxed{0.4863}
+= \frac{1}{3}(0.7446 + 0.2287 + 0.4852)
+= \frac{1.4585}{3}
+= \boxed{0.4862}
 $$
 
 ---
@@ -201,7 +201,7 @@ Perplexity is the exponentiated average cross-entropy loss and is the standard
 reporting metric for language model quality:
 
 $$
-\text{PPL} = \exp(\mathcal{L}) = e^{0.4863} \approx 1.627
+\text{PPL} = \exp(\mathcal{L}) = e^{0.4862} \approx 1.626
 $$
 
 For a vocabulary of size 6, a random model would achieve $\mathcal{L} = \log 6
@@ -231,40 +231,40 @@ targets = torch.tensor([0, 1, 2], dtype=torch.long)
 probs = F.softmax(logits, dim=-1)
 print("Softmax probs (row = position, col = vocab):")
 print(probs)
-# tensor([[0.4749, 0.0785, 0.0175, 0.1294, 0.2607, 0.0390],
-#         [0.0196, 0.7955, 0.0358, 0.0119, 0.0396, 0.0975],
+# tensor([[0.4749, 0.0785, 0.0175, 0.1294, 0.2606, 0.0390],
+#         [0.0197, 0.7955, 0.0358, 0.0119, 0.0396, 0.0974],
 #         [0.1018, 0.0617, 0.6156, 0.0505, 0.0186, 0.1518]])
 
 # Log-probabilities of correct tokens
 log_probs = F.log_softmax(logits, dim=-1)
 correct_log_probs = log_probs[torch.arange(3), targets]
 print("\nLog-prob of correct token per position:", correct_log_probs)
-# tensor([-0.7444, -0.2291, -0.4853])
+# tensor([-0.7446, -0.2287, -0.4852])
 
 # Per-token NLL
 per_token_loss = -correct_log_probs
 print("Per-token NLL:", per_token_loss)
-# tensor([0.7444, 0.2291, 0.4853])
+# tensor([0.7446, 0.2287, 0.4852])
 
 # Mean loss
 loss_manual = per_token_loss.mean()
-print(f"\nMean loss (manual): {loss_manual:.4f}")  # 0.4863
+print(f"\nMean loss (manual): {loss_manual:.4f}")  # 0.4862
 
 # --- PyTorch built-in (should match exactly) ---
 loss_builtin = F.cross_entropy(logits, targets)
-print(f"Mean loss (F.cross_entropy): {loss_builtin:.4f}")  # 0.4863
+print(f"Mean loss (F.cross_entropy): {loss_builtin:.4f}")  # 0.4862
 
 # Perplexity
 perplexity = torch.exp(loss_builtin)
-print(f"Perplexity: {perplexity:.4f}")  # 1.6267
+print(f"Perplexity: {perplexity:.4f}")  # 1.6261
 ```
 
 **Expected output:**
 
 ```
-Mean loss (manual):        0.4863
-Mean loss (F.cross_entropy): 0.4863
-Perplexity:                1.6267
+Mean loss (manual):        0.4862
+Mean loss (F.cross_entropy): 0.4862
+Perplexity:                1.6261
 ```
 
 ---
@@ -283,8 +283,8 @@ Perplexity:                1.6267
 3. Perplexity is $e^\mathcal{L}$, so a loss improvement of $0.1$ nats
    corresponds to a perplexity reduction that depends on the current value.
    At $\mathcal{L} = 2.0$ (PPL $\approx 7.39$), reducing loss by $0.1$ gives
-   PPL $\approx 6.69$ — a drop of $0.70$. Perplexity improvements get cheaper
-   (in loss units) as models improve.
+   PPL $\approx 6.69$ — a drop of $0.70$. Since $d\,\text{PPL} = \text{PPL}\,d\mathcal{L}$, the same loss
+   improvement buys a smaller perplexity drop as models improve (a given perplexity drop costs more loss).
 
 4. In teacher-forcing training, the targets at all positions are known in advance
    and the loss is computed over all $T$ positions in a single forward pass —

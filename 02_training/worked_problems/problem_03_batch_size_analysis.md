@@ -9,7 +9,7 @@ A team is training a 7B parameter language model. They have access to:
 - Sequence length: $L = 2048$ tokens
 - Gradient accumulation steps: $k = 16$
 
-An experiment has estimated the **gradient noise scale** (Mccandlish et al., 2018)
+An experiment has estimated the **gradient noise scale** (McCandlish et al., 2018)
 for this model-dataset combination at the start of training:
 
 $$
@@ -169,17 +169,18 @@ exposed to more unique data tokens than a smaller-batch regime.
 
 ## Part 4 — Compute-Optimal Batch Size
 
-A useful heuristic for the **compute-optimal batch size** — the one that
-minimises total FLOPs to a target loss — is:
+A useful heuristic for the **best-balanced batch size** is:
 
 $$
 B_\text{opt} = B_\text{crit}
 $$
 
-At $B = B_\text{crit}$, both steps and data overhead are minimised jointly (each
-is $2\times$ the theoretical minimum, which is the Pareto-optimal point). Any
-deviation from $B_\text{crit}$ increases *either* step count *or* data
-consumption multiplicatively.
+Note that this is *not* the batch size that minimises total FLOPs to a target
+loss: total FLOPs scale with $E(B)$, which keeps falling as $B \to 0$ (at the
+cost of $S \to \infty$ steps). $B_\text{crit}$ is the knee of the steps–data
+trade-off, where both overheads are $2\times$ their theoretical minima. Moving
+away from it in either direction improves one overhead only by worsening the
+other disproportionately.
 
 For the team's model:
 
@@ -226,15 +227,18 @@ $$
 \implies \frac{1}{S(B)} = \frac{1}{S_\min} \cdot \frac{1}{1 + B_\text{crit}/B}
 $$
 
-In linear form: if we plot $S_\min / S(B)$ vs $1/B$, we get a line with slope
-$B_\text{crit}/S_\min$ and intercept $1/S_\min$. A linear regression on
-$(1/B,\; S_\min/S(B))$ immediately yields both $S_\min$ and $B_\text{crit}$.
+In linear form: $S(B) = S_\min + S_\min B_\text{crit} \cdot (1/B)$, so plotting
+$S(B)$ against $1/B$ gives a straight line with intercept $S_\min$ and slope
+$S_\min B_\text{crit}$. A linear regression on $(1/B,\; S(B))$ immediately
+yields both: $S_\min$ is the intercept and $B_\text{crit}$ = slope / intercept.
 
 **Alternatively**, the simpler two-point estimate:
 
 $$
-B_\text{crit} \approx \frac{S(B_\text{small}) \cdot B_\text{small} - S(B_\text{large}) \cdot B_\text{large}}{S(B_\text{large}) - S(B_\text{small})}
+B_\text{crit} = \frac{B_\text{small} \, B_\text{large} \left(S(B_\text{large}) - S(B_\text{small})\right)}{S(B_\text{small}) \cdot B_\text{small} - S(B_\text{large}) \cdot B_\text{large}}
 $$
+
+(which follows exactly from writing $S(B)\,B = S_\min (B + B_\text{crit})$ at both batch sizes)
 
 where $B_\text{small}$ and $B_\text{large}$ are two batch sizes with
 $B_\text{small} \ll B_\text{crit} \ll B_\text{large}$ (if known approximately

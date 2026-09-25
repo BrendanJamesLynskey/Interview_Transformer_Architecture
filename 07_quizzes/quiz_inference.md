@@ -33,7 +33,7 @@ up to 4096 tokens.  Approximately how large is the KV cache per request in FP16?
 
 **A.** ~500 MB
 
-**B.** ~160 MB
+**B.** ~1.3 GB
 
 **C.** ~80 MB
 
@@ -85,7 +85,7 @@ are these and why do they complicate quantisation?
 **A.** Outlier activations are tokens in the input that are longer than 512 characters.
 
 **B.** In large LLMs (typically beyond ~6.7B parameters), a small fraction of hidden dimensions
-develop activation magnitudes many times larger (100x or more) than typical.  Quantising these
+develop activation magnitudes many times larger (up to about 20x) than typical.  Quantising these
 dimensions together with normal ones causes massive rounding error.  LLM.int8() addresses this
 by processing outlier dimensions in FP16 and quantising the remainder in INT8 (mixed-precision
 decomposition).
@@ -391,13 +391,13 @@ LLaMA-2-70B uses GQA with 8 KV heads. Using the KV cache formula:
 
 $\text{KV cache} = 2 \times L \times B \times H_{KV} \times T \times d_h \times \text{bytes\_per\_element}$
 
-$= 2 \times 80 \times 1 \times 8 \times 4096 \times 128 \times 2 \approx 167$ MB.
+$= 2 \times 80 \times 1 \times 8 \times 4096 \times 128 \times 2 = 1{,}342{,}177{,}280$ bytes $\approx 1.34$ GB.
 
-This is approximately 160 MB, matching option B.
+This is approximately 1.3 GB, matching option B.
 
-- **A is wrong.** 500 MB would correspond to an intermediate head count.
-- **C is wrong.** 80 MB would require even fewer KV heads or shorter sequences.
-- **D is wrong.** 5 GB would correspond to the full MHA (64 K/V heads) case without GQA.
+- **A is wrong.** 500 MB is less than half the correct value.
+- **C is wrong.** 80 MB would require far fewer layers, KV heads or tokens.
+- **D is wrong.** 5 GB is about 4x too large; full MHA with 64 K/V heads would need ~10.7 GB.
 
 ---
 
@@ -443,9 +443,10 @@ to achieve near-FP16 quality at INT4.
 
 **Correct: B.**
 
-Dettmers et al. found that starting around 6.7B parameters, a few feature dimensions (sometimes
-fewer than 10 out of 4096) develop magnitudes up to 60,000x larger than the median.  These
-outliers appear consistently across tokens and layers once they emerge.  Treating them with the
+Dettmers et al. found that large features with magnitudes up to 20x larger than other dimensions
+appear as models scale, and at around 6.7B parameters they affect all layers: about 150,000
+outliers per sequence, concentrated in only 6 feature dimensions.  These outliers appear
+consistently across tokens and layers once they emerge.  Treating them with the
 same INT8 scale as normal dimensions forces either clipping (losing the outlier) or a very large
 scale (losing precision for normal values).  The mixed-precision decomposition decomposes the
 matrix product, handling outlier columns in FP16 and the remainder in INT8.
@@ -480,7 +481,7 @@ This is ~128x fewer parameters than the full weight matrix ($4096^2 = 16{,}777{,
 
 Rank $r$ is the intrinsic dimension of the weight update.  Higher $r$ allows $\Delta W$ to span
 a larger subspace, capturing more complex task-specific adaptations.  The parameter count of the
-LoRA adapter scales as $2 \cdot r \cdot (m + n) / 2 \approx r \cdot d_{\text{model}}$, growing
+LoRA adapter scales as $r \cdot (m + n) = 2 r \cdot d_{\text{model}}$ for a square $d_{\text{model}} \times d_{\text{model}}$ matrix, growing
 linearly with $r$.  For small fine-tuning datasets, high-rank adapters may overfit.
 
 - **B is wrong.** Higher rank means more parameters and LESS regularisation, not more.
@@ -542,8 +543,7 @@ Short requests wait idly while the long ones continue, wasting GPU cycles.  Cont
 the granularity of a single decode iteration, achieving close to 100% GPU utilisation.  This
 gives 3--10x throughput improvements over static batching in practice.
 
-- **A is wrong.** That describes KV cache eviction policies (e.g., sliding window in Orca), not
-  continuous batching itself.
+- **A is wrong.** That describes KV cache eviction policies, not continuous batching itself.
 - **C is wrong.** Continuous batching is an inference serving technique, not a training gradient
   accumulation method.
 - **D is wrong.** Shared prefix compression is a separate optimisation (prompt/prefix caching).
@@ -631,9 +631,9 @@ TGI, and TensorRT-LLM serve large models in practice.
 
 **Correct: B.**
 
-GPTQ builds on Optimal Brain Surgeon (OBS): it quantises one weight column at a time, computing
-the second-order (Hessian) sensitivity to quantise in order of increasing error, and updates
-the remaining unquantised weights to compensate.  This is done layer by layer using a
+GPTQ builds on Optimal Brain Surgeon (OBS): it quantises one weight column at a time in a fixed order
+(unlike OBQ's greedy error-ordered choice), using second-order (inverse Hessian) information to
+update the remaining unquantised weights to compensate.  This is done layer by layer using a
 calibration set of ~128 sequences.  At 4-bit precision, GPTQ achieves near-FP16 perplexity
 where simple RTN fails noticeably.
 

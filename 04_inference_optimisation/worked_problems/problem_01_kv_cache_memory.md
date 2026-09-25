@@ -82,7 +82,7 @@ $$
 | 2,048 | 32 | 65,536 | $65536 \times 0.524\,\text{MB} = 34.4\,\text{GB}$ | Yes (model weights ~14 GB leaves ~66 GB) |
 | 4,096 | 1 | 4,096 | $4096 \times 0.524\,\text{MB} = 2.15\,\text{GB}$ | Yes |
 | 4,096 | 8 | 32,768 | $32768 \times 0.524\,\text{MB} = 17.2\,\text{GB}$ | Yes |
-| 4,096 | 32 | 131,072 | $131072 \times 0.524\,\text{MB} = 68.7\,\text{GB}$ | Marginal (model weights + KV ~83 GB) |
+| 4,096 | 32 | 131,072 | $131072 \times 0.524\,\text{MB} = 68.7\,\text{GB}$ | No (model weights + KV ~83 GB > 80 GB) |
 | 8,192 | 1 | 8,192 | $8192 \times 0.524\,\text{MB} = 4.29\,\text{GB}$ | Yes |
 | 8,192 | 8 | 65,536 | $65536 \times 0.524\,\text{MB} = 34.4\,\text{GB}$ | Yes |
 | 8,192 | 32 | 262,144 | $262144 \times 0.524\,\text{MB} = 137.4\,\text{GB}$ | No (exceeds 80 GB by $\sim 70$ GB) |
@@ -90,11 +90,10 @@ $$
 **Detailed calculation for $T = 4096$, $B = 32$:**
 
 $$
-M = 32 \times 32 \times 32 \times 128 \times 4096 \times 2
-= 32 \times 2^{25} \times 2
-= 32 \times 67{,}108{,}864
-= 2{,}147{,}483{,}648 \text{ bytes}
-\approx 2.15 \text{ GB} \times 32 = 68.7 \text{ GB}
+M = 32 \text{ (batch)} \times 2 \times 32 \times 32 \times 128 \times 4096 \times 2
+= 32 \times 2{,}147{,}483{,}648
+= 68{,}719{,}476{,}736 \text{ bytes}
+\approx 68.7 \text{ GB}
 $$
 
 ---
@@ -193,7 +192,7 @@ $$
 
 | $T$ | $B_\text{max}$ (7B on 80 GB) |
 |-----|-------------------------------|
-| 512 | 246 sequences |
+| 512 | 245 sequences |
 | 2,048 | 61 sequences |
 | 4,096 | 30 sequences |
 | 8,192 | 15 sequences |

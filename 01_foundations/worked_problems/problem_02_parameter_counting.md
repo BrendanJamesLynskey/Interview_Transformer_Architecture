@@ -147,15 +147,13 @@ $$P_{\text{total}} = 38.6\text{M} + 0.8\text{M} + 85.1\text{M} + 0.002\text{M (f
 
 **Wait — where does "117M" come from?**
 
-The discrepancy arises from:
-1. GPT-2's output layer **is not tied** to the input embeddings in the original implementation — but the "117M" figure counts non-embedding parameters by convention.
-2. Different sources count parameters differently (include/exclude embeddings, include/exclude biases).
+It is an error in the original GPT-2 paper and blog posts. OpenAI's GPT-2 repository notes: "our original parameter counts were wrong due to an error (in our previous blog posts and paper). Thus you may have seen small referred to as 117M and medium referred to as 345M." The small model is now labelled 124M.
 
-**Non-embedding parameter count:**
+The count above is correct: $38{,}597{,}376 + 786{,}432 + 85{,}054{,}464 + 1{,}536 = 124{,}439{,}808$, which is exactly the Hugging Face count for `gpt2`. The output layer is tied to the token embedding, so that matrix is counted once.
+
+**Non-embedding parameter count** (for reference):
 
 $$P_{\text{non-embed}} = 12 \times 7{,}087{,}872 + 1{,}536 \approx 85\text{M}$$
-
-**The "117M" typically includes both embedding tables but the figure varies by source.** The exact Hugging Face count for `gpt2` is **124,439,808** parameters (with both embedding tables), or **117,653,760** if the output projection reuses the embedding weights.
 
 ---
 
@@ -239,4 +237,4 @@ $$d_{\text{model}} \approx \sqrt{\frac{P_{\text{total}}}{12 L}}$$
 | GPT-2 Large | 774M | 36 | $\sqrt{774\text{M} / 432} \approx 1{,}338$ | 1,280 |
 | GPT-3 | 175B | 96 | $\sqrt{175\text{B} / 1{,}152} \approx 12{,}325$ | 12,288 |
 
-The approximation underestimates $d$ slightly because it ignores embeddings, but it gives a strong first estimate.
+The approximation overestimates $d$ slightly because the quoted $P$ includes the embeddings, which the $12Ld^2$ term does not model (strongly so for small models like GPT-2 Small), but it gives a strong first estimate.

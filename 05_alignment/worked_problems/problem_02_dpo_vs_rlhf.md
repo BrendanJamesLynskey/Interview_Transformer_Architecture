@@ -128,30 +128,33 @@ def dpo_loss(policy_logprobs_w, policy_logprobs_l,
 We compare training a 70B parameter model. Assume:
 - BF16 precision: 2 bytes per parameter
 - 70B parameters → 140 GB per model copy (weights only)
-- Full Adam optimiser states: 3x extra (fp32 weights + first moment + second moment) = 420 GB for the model being trained
+- Full Adam optimiser states: fp32 master weights + first moment + second moment = 12 bytes per parameter = 840 GB for the model being trained
+- Gradients (BF16): 140 GB for the model being trained
 
 **DPO memory requirements:**
 
 | Component | Memory |
 |---|---|
 | Policy model (BF16 weights) | 140 GB |
-| Policy optimiser states (fp32) | 420 GB |
+| Policy gradients (BF16) | 140 GB |
+| Policy optimiser states (fp32) | 840 GB |
 | Reference model (BF16, frozen, inference only) | 140 GB |
 | Activations (gradient checkpointing) | ~10–30 GB |
-| **Total** | **~720 GB** |
+| **Total** | **~1,270–1,290 GB** |
 
 **RLHF/PPO memory requirements:**
 
 | Component | Memory |
 |---|---|
 | Policy model (BF16 weights) | 140 GB |
-| Policy optimiser states (fp32) | 420 GB |
+| Policy gradients (BF16) | 140 GB |
+| Policy optimiser states (fp32) | 840 GB |
 | Reference model (BF16, frozen) | 140 GB |
 | Reward model (assume 13B, BF16) | 26 GB |
 | Value function (shared backbone with policy) | ~10 GB (extra head) |
 | Value function optimiser states | ~30 GB |
 | Activations + rollout buffers | ~30–60 GB |
-| **Total** | **~820–900 GB** |
+| **Total** | **~1,360–1,390 GB** |
 
 **Compute per training step:**
 
@@ -159,7 +162,7 @@ DPO requires:
 1. Forward pass through policy on $(x, y_w)$ and $(x, y_l)$: 2 forward passes
 2. Forward pass through reference model on $(x, y_w)$ and $(x, y_l)$: 2 forward passes (no grad)
 3. Backward pass through policy: 1 backward pass
-- Total: equivalent to ~3 full model forward passes (backward ≈ 2x forward)
+- Total: equivalent to ~8 single-sequence forward passes (2 policy + 2 reference + a backward pass over both sequences at ≈ 2x forward = 4)
 
 RLHF/PPO requires per iteration:
 1. Autoregressive generation (rollout): ~T forward passes for a response of length T (slow; serial)

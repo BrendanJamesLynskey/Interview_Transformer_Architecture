@@ -508,7 +508,9 @@ FlashAttention's contribution is IO-awareness, not FLOP reduction.  Standard att
 $QK^\top$ and writes the full $T \times T$ matrix to HBM before computing softmax and then
 $\text{softmax}(QK^\top)V$, requiring $O(T^2)$ HBM reads/writes.  FlashAttention tiles the
 computation into SRAM-sized blocks (typically 64--128 rows at a time), fusing the entire
-attention operation into a single kernel pass that reads from HBM only $O(T)$ times in total.
+attention operation into a single kernel. HBM traffic falls from $\Theta(Td + T^2)$ to
+$\Theta(T^2 d^2 / M)$ accesses, where $M$ is the SRAM size (Dao et al., 2022, Theorem 2) — several-fold
+less in practice, though K and V are still re-read once per query block.
 The FLOPs are identical to standard attention.
 
 - **A is wrong.** FlashAttention does NOT reduce FLOPs; it may even increase them slightly
@@ -543,8 +545,8 @@ contribution is added.  This is provably exact; no approximation is involved.
 
 Standard LayerNorm: $\hat{x}_i = (x_i - \mu) / \sqrt{\sigma^2 + \epsilon}$, then scales and
 shifts.  RMSNorm: $\hat{x}_i = x_i / \text{RMS}(x)$ where $\text{RMS}(x) = \sqrt{\frac{1}{d}\sum_i x_i^2}$.
-The mean-centring step is removed.  Zhang & Sennrich showed this achieves similar downstream
-performance with ~7--15% faster normalisation in practice.
+The mean-centring step is removed.  Zhang & Sennrich (2019) showed this achieves similar downstream
+performance while reducing running time by 7--64% across the models they tested.
 
 - **A is wrong.** Both LayerNorm and RMSNorm use per-sample (not per-batch) statistics.
 - **C is wrong.** Both normalise over the feature (hidden) dimension.
@@ -575,7 +577,8 @@ is usually reduced by a factor of $2/3$.
 
 With window size $w$, each token attends to $w$ neighbours, so total attention computation is
 $O(T \cdot w)$ rather than $O(T^2)$.  For $w \ll T$ this is a major saving.  Mistral 7B uses
-a sliding window of $w = 4096$ on a context of 32K tokens, reducing quadratic cost 64x.
+a sliding window of $w = 4096$; for a context of $T$ tokens the attention cost falls by a factor of
+$T / w$ (for example, $8\times$ at 32K tokens).
 Global tokens (like the CLS token in Longformer) can attend to the full sequence, partially
 recovering long-range dependencies.
 
@@ -592,11 +595,12 @@ recovering long-range dependencies.
 
 **Correct: B.**
 
-In architectures like RWKV cross-layer attention or some recent "MLA" designs (e.g., DeepSeek-V2),
-sharing K/V projections across groups of layers directly reduces (1) the number of learned
+In Cross-Layer Attention (CLA; Brandon et al., 2024), sharing K/V projections across groups of
+adjacent layers directly reduces (1) the number of learned
 projection matrices and (2) the KV cache footprint at inference.  The trade-off is that layers
 sharing K/V cannot independently learn to extract different relational structures from the same
-input.
+input. (DeepSeek-V2's Multi-head Latent Attention, by contrast, shrinks the KV cache by compressing
+K/V into a low-rank latent within each layer, not by sharing across layers.)
 
 - **A is wrong.** KV sharing is orthogonal to the residual connection design.
 - **C is wrong.** The backward pass must still compute gradients for all layers; sharing parameters

@@ -342,19 +342,15 @@ to $2.65\times$ — the draft model cost is non-negligible even at $10\times$ fa
 | $\gamma$ | $\mathbb{E}[N]$ | $S$ (with $c=0.1$) |
 |----------|----------------|---------------------|
 | 1 | $1.85$ | $1.85 / (0.1 + 1) = 1.68\times$ |
-| 2 | $2.55$ | $2.55 / (0.2 + 1) = 2.13\times$ |
+| 2 | $2.57$ | $2.57 / (0.2 + 1) = 2.14\times$ |
 | 4 | $3.71$ | $3.71 / (0.4 + 1) = 2.65\times$ |
-| 8 | $5.47$ | $5.47 / (0.8 + 1) = 3.04\times$ |
-| 16 | $6.52$ | $6.52 / (1.6 + 1) = 2.51\times$ |
-| 32 | $6.66$ | $6.66 / (3.2 + 1) = 1.59\times$ |
+| 8 | $5.12$ | $5.12 / (0.8 + 1) = 2.85\times$ |
+| 16 | $6.25$ | $6.25 / (1.6 + 1) = 2.40\times$ |
+| 32 | $6.63$ | $6.63 / (3.2 + 1) = 1.58\times$ |
 
 **Observation.** There is an optimal $\gamma$ that maximises speedup. Too small
 and the speculation is wasted; too large and the draft model overhead dominates.
-The optimal $\gamma$ satisfies:
-
-$$
-\frac{dS}{d\gamma} = 0 \implies \gamma_\text{opt} \approx \frac{\log(1 - (1-\alpha)/\ln(1/\alpha))}{\log \alpha}
-$$
+The optimal $\gamma$ satisfies $dS/d\gamma = 0$, which has no simple closed form because it depends on both $\alpha$ and $c$; it is easiest to evaluate $S(\gamma)$ numerically. Here ($\alpha = 0.85$, $c = 0.1$) the maximum is at $\gamma = 7$, $S \approx 2.85\times$.
 
 In practice, $\gamma = 4\text{–}8$ is typical for a draft model that is $10\times$
 faster and achieves $\alpha \approx 0.7\text{–}0.9$.

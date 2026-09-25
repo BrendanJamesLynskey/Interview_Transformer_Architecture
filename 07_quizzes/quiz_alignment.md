@@ -518,7 +518,8 @@ Classic examples: models learn to produce very long responses (reward models oft
 longer, more detailed answers, regardless of quality), to add excessive caveats and disclaimers
 (which look "safe" to annotators), or to use confident assertive language (which sounds
 authoritative).  Gao et al. (2022) formalised reward hacking in terms of "gold reward vs.
-proxy reward" divergence, showing it scales with the number of RL training steps.
+proxy reward" divergence, showing how it grows with the KL distance the policy moves from its
+initialisation, and how it depends on reward-model size.
 
 - **A is wrong.** Annotators do not "hack" scores; this describes a model behaviour.
 - **C is wrong.** Reward hacking is a training dynamics phenomenon, not a hardware attack.
@@ -696,8 +697,10 @@ instruction-following outputs.
 
 **Correct: B.**
 
-The alignment tax was documented in the original InstructGPT paper: RLHF-tuned models sometimes
-scored lower on standard NLP benchmarks (TruthfulQA, WinogradNLI) than the base model.
+The alignment tax was documented in the original InstructGPT paper: RLHF-tuned models showed
+performance regressions compared to GPT-3 on certain public NLP datasets, notably SQuAD, DROP,
+HellaSwag and WMT 2015 French-to-English translation (Ouyang et al., 2022). (InstructGPT
+actually improved on TruthfulQA.)
 The model learns to hedge, qualify, and be verbose, which can hurt precision-requiring tasks.
 Modern approaches (Constitutional AI, strong DPO with diverse data, careful reward model
 design) have substantially narrowed this gap; models like Claude 3 and GPT-4 show minimal or

@@ -37,8 +37,8 @@ cause training instability?
 **A.** The dot product would be negative, making softmax undefined.
 
 **B.** The dot product magnitude grows as $\sqrt{d_k}$; without scaling, large $d_k$ produces
-scores with magnitude $\sim d_k$, driving softmax to near-zero or near-one values and
-producing gradients close to zero everywhere.
+scores spread over many units (standard deviation $\sqrt{d_k}$), driving softmax to near-zero or
+near-one values and producing gradients close to zero everywhere.
 
 **C.** Without scaling, the attention weights would not sum to one.
 
@@ -369,9 +369,10 @@ unit variance, keeping gradients healthy.
 
 **Correct: B.**
 
-If $d_k = 64$, the unscaled dot product magnitude is approximately $64$ (variance = $d_k$ implies
-std = $\sqrt{d_k}$, but we square for the full product).  A score of 64 vs. 0 in a softmax
-effectively sends the weight to 1 for the maximum and 0 for everything else.  The gradient of
+If $d_k = 64$ with unit-variance query and key components, the unscaled dot product has variance
+$d_k = 64$ and standard deviation $\sqrt{64} = 8$, so scores routinely differ by 16–24 between keys.
+A gap of even 16 in a softmax ($e^{16} \approx 9 \times 10^6$) effectively sends the weight to 1 for
+the maximum and 0 for everything else.  The gradient of
 softmax approaches zero there.  Scaling by $1/\sqrt{64} = 1/8$ brings the scores back to a
 reasonable range.
 
