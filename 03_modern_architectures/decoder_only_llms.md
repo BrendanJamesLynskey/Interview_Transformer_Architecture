@@ -252,3 +252,25 @@ $$\text{FFN}(\mathbf{x}) = W_{\text{down}} \left[(\mathbf{x} W_{\text{up}}) \oti
 **Why gating helps:** The multiplicative interaction creates a form of input-conditioned feature selection. Unlike a standard FFN where all neurons contribute to every output (additively), the gate can zero out irrelevant features. This provides a form of dynamic sparsity. Empirically, Shazeer (2020) showed GEGLU/SwiGLU consistently reduce perplexity by $\sim0.5\text{--}1$ bits/byte vs GELU FFN at matched parameter counts.
 
 The parameter count cost: a standard $d \to 4d \to d$ FFN uses $2 \times 4d^2$ parameters. A SwiGLU FFN uses $3 \times \frac{8d^2}{3}$ parameters (with the $\frac{2}{3}$ scaling), keeping parameter count approximately equal.
+
+---
+
+### Q12. What is a causal encoder-decoder (CED), as in DeepSeek-V4.1-Flash, and why does it cut prefill cost for agent workloads?
+
+**Answer.**
+
+DeepSeek-V4.1-Flash (DeepSeek-AI, arXiv:2609.19969, 2026) keeps the decoder-only interface (one causal token stream, prefix caching, autoregressive decoding) but splits its $L = 40$ layers into a 20-layer **causal encoder** and a 20-layer **decoder**. For global attention, a decoder layer $l > L/2$ does not compute its keys and values from its own hidden state $H_l$; it projects them from the last encoder state with its own weights (section 2.2, equation 1):
+
+$$C_l = H_{L/2} W_l^{KV}, \qquad l > L/2$$
+
+**Why prefill gets cheaper.** A prompt token's contribution to every decoder layer's global KV is a linear projection of the encoder output, so prefill only has to run the encoder (plus those projections). Decode still runs every layer. The report gives 8B activated parameters per token at prefill and 16B at decode, and prefill work falling from $O(NL)$ to about $O(NL/2 + n_{win} L/2)$ (section 2.2).
+
+**The catch: sliding-window state.** Each decoder layer also has a sliding-window attention branch whose keys and values come from its own hidden state. The first decode steps need it for the last $n_{win} = 128$ positions, so prefill replays the last 128 prompt tokens through the decoder with the window truncated to that segment. This is approximate; the report measures a negligible quality impact and trains with the same replay (section 3.2.2).
+
+**How it differs from T5.** T5's encoder is bidirectional and the decoder cross-attends to a separate input stream, so appending to the input changes every encoder state. A *causal* encoder never revisits earlier positions, so a growing agent context is encoded incrementally and cached like any decoder-only KV cache.
+
+**Why agent loops in particular.** Each step appends a tool result (many input tokens) and generates a short tool call (few output tokens). Cache misses and new suffixes make prefill the dominant compute; halving it matters most when prompts dwarf outputs. Decode-heavy workloads gain nothing.
+
+**What it does not do.** CED by itself does not shrink the KV cache; DeepSeek-V4.1-Flash's 890 bytes per token of global KV (about 1/4 of V4-Flash) comes from cross-layer KV sharing (CSA2) and FP4 storage. Its quality cost is not isolated in the report, and the prompt's upper-layer KV is computed at half depth, which is the open question.
+
+**Follow-up: what changes in serving?** Prefill and decode pools no longer run the same model. An SGLang RFC (sgl-project/sglang issue #39963) proposes prefill workers that hold only the encoder (about half the weights) and decode workers that run the 128-token replay as their first step. See [Arch 06 — Asymmetric Causal Encoder-Decoder](https://brendanjameslynskey.github.io/Arch_06_Asymmetric_Causal_Encoder_Decoder/) and the simulated pool sizing in [LLM Inference Simulators 05](https://brendanjameslynskey.github.io/InfSim_05_Disaggregated_Inference/#slide-11).

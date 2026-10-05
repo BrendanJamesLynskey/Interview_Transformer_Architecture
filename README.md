@@ -58,7 +58,7 @@ Training methodologies and techniques for large-scale model development.
 
 Recent architectural innovations and optimizations in transformer-based LLMs.
 
-- `decoder_only_llms.md` — Why decoder-only models dominate modern LLMs
+- `decoder_only_llms.md` — Why decoder-only models dominate modern LLMs, and the causal encoder-decoder (CED) variant with encoder-only prefill
 - `rope_and_alibi.md` — Rotary position embeddings and ALiBi
 - `grouped_query_attention.md` — Grouped query attention for efficiency
 - `mixture_of_experts.md` — MoE routing and training considerations
